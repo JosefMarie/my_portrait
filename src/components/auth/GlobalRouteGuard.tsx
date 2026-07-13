@@ -11,7 +11,7 @@ export default function GlobalRouteGuard() {
 
   useEffect(() => {
     if (!loading && user) {
-      if (userRole === "artist" && verificationStatus === "INCOMPLETE") {
+      if (userRole === "artist" && (verificationStatus === "INCOMPLETE" || verificationStatus === "PENDING")) {
         // Force them to the onboarding page if they aren't already there
         if (pathname !== "/onboarding/artist") {
           router.push("/onboarding/artist");

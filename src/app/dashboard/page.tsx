@@ -6,58 +6,42 @@ import { getArtworksByArtist, Artwork } from "@/lib/firebase/artworks";
 import { useRouter } from "next/navigation";
 import NoiseBackground from "@/components/background/NoiseBackground";
 import Link from "next/link";
-import { motion } from "framer-motion";
-
-interface DashboardMetrics {
-  totalLikes: number;
-  totalViews: number; // Mocked based on likes
-  totalArtworks: number;
-  trendingScore: number;
-}
+import { motion, AnimatePresence } from "framer-motion";
+import AnalyticsStudio from "@/components/dashboard/AnalyticsStudio";
+import CommissionDesk from "@/components/dashboard/CommissionDesk";
+import PortfolioCurator from "@/components/dashboard/PortfolioCurator";
+import AuthenticityHub from "@/components/dashboard/AuthenticityHub";
+import { LayoutDashboard, MessageSquare, Briefcase, Settings, LogOut, ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function ArtistDashboard() {
   const { user, userRole, verificationStatus, loading } = useAuth();
   const router = useRouter();
-  const [artworks, setArtworks] = useState<Artwork[]>([]);
-  const [metrics, setMetrics] = useState<DashboardMetrics>({ totalLikes: 0, totalViews: 0, totalArtworks: 0, trendingScore: 0 });
+  const [activeWidgets, setActiveWidgets] = useState({
+    analytics: true,
+    commissions: true,
+    portfolio: true,
+    authenticity: true
+  });
+
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     if (!loading) {
-      if (!user) {
-        router.push("/");
-      } else if (userRole !== "artist") {
-        router.push("/marketplace");
-      } else if (verificationStatus === "INCOMPLETE") {
-        router.push("/onboarding/artist");
-      }
+      if (!user) router.push("/");
+      else if (userRole !== "artist") router.push("/marketplace");
+      else if (verificationStatus === "INCOMPLETE") router.push("/onboarding/artist");
     }
   }, [user, userRole, verificationStatus, loading, router]);
 
-  useEffect(() => {
-    if (user && userRole === "artist") {
-      loadMetrics();
-    }
-  }, [user, userRole]);
+  const toggleWidget = (widget: keyof typeof activeWidgets) => {
+    setActiveWidgets(prev => ({ ...prev, [widget]: !prev[widget] }));
+  };
 
-  const loadMetrics = async () => {
-    if (!user) return;
-    const items = await getArtworksByArtist(user.uid);
-    setArtworks(items);
-
-    let likes = 0;
-    items.forEach(art => {
-      likes += art.likes?.length || 0;
-    });
-
-    const views = likes * 12 + Math.floor(Math.random() * 50); // Mock views
-    const score = Math.floor((likes * 5) + (views * 0.1));
-
-    setMetrics({
-      totalLikes: likes,
-      totalViews: views,
-      totalArtworks: items.length,
-      trendingScore: score
-    });
+  const handleLogout = async () => {
+    const { auth } = await import('@/lib/firebase/config');
+    const { signOut } = await import('firebase/auth');
+    await signOut(auth);
   };
 
   if (loading || userRole !== "artist") return <div className="min-h-screen bg-[#0A0A0A]"></div>;
@@ -77,65 +61,168 @@ export default function ArtistDashboard() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#0A0A0A]">
-      <NoiseBackground />
-      
-      <div className="relative z-10 p-8 max-w-7xl mx-auto min-h-screen flex flex-col">
-        <header className="flex justify-between items-center mb-12 pb-4 border-b border-white/10">
-          <Link href="/" className="text-gray-400 hover:text-white transition-colors flex items-center gap-2">
-            <span>←</span> Home
-          </Link>
-          <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tighter">ARTIST DASHBOARD</h1>
-          <div className="w-16"></div>
-        </header>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="glass p-6 text-center">
-            <h3 className="text-sm text-gray-400 mb-2 uppercase tracking-widest">Trending Score</h3>
-            <div className="text-5xl font-bold text-[#00f3ff] drop-shadow-[0_0_15px_rgba(0,243,255,0.3)]">{metrics.trendingScore}</div>
-          </motion.div>
-          
-          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }} className="glass p-6 text-center">
-            <h3 className="text-sm text-gray-400 mb-2 uppercase tracking-widest">Total Views</h3>
-            <div className="text-4xl font-bold text-white">{metrics.totalViews.toLocaleString()}</div>
-          </motion.div>
-          
-          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }} className="glass p-6 text-center">
-            <h3 className="text-sm text-gray-400 mb-2 uppercase tracking-widest">Total Likes</h3>
-            <div className="text-4xl font-bold text-white">{metrics.totalLikes.toLocaleString()}</div>
-          </motion.div>
-          
-          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }} className="glass p-6 text-center">
-            <h3 className="text-sm text-gray-400 mb-2 uppercase tracking-widest">Portfolio Size</h3>
-            <div className="text-4xl font-bold text-white">{metrics.totalArtworks}</div>
-          </motion.div>
+    <div className="flex min-h-screen bg-[#0A0A0A]">
+      {/* Sidebar */}
+      <motion.aside 
+        initial={false}
+        animate={{ width: isSidebarCollapsed ? 80 : 256 }}
+        className="border-r border-white/10 bg-[#0A0A0A] hidden md:flex flex-col relative z-20 shrink-0"
+      >
+        <div className="p-6 flex items-center justify-between">
+          {!isSidebarCollapsed && (
+            <h2 className="text-2xl font-bold text-white tracking-tighter truncate">ARTIST<span className="text-[#00f3ff]">PORTAL</span></h2>
+          )}
+          <button 
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            className="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-white mx-auto"
+          >
+            {isSidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          </button>
         </div>
+        <nav className="flex-1 px-4 space-y-2 mt-4">
+          <button 
+            onClick={() => setActiveTab("dashboard")}
+            className={`w-full flex items-center px-4 py-3 rounded-xl transition-colors ${activeTab === 'dashboard' ? 'bg-[#00f3ff]/10 text-[#00f3ff] font-medium' : 'text-gray-400 hover:text-white hover:bg-white/5'} ${isSidebarCollapsed ? 'justify-center' : ''}`}
+            title="Smart Dashboard"
+          >
+            <LayoutDashboard size={20} className={isSidebarCollapsed ? '' : 'mr-3 shrink-0'} />
+            {!isSidebarCollapsed && <span className="truncate">Smart Dashboard</span>}
+          </button>
+          <button 
+            onClick={() => setActiveTab("engagement")}
+            className={`w-full flex items-center px-4 py-3 rounded-xl transition-colors ${activeTab === 'engagement' ? 'bg-[#00f3ff]/10 text-[#00f3ff] font-medium' : 'text-gray-400 hover:text-white hover:bg-white/5'} ${isSidebarCollapsed ? 'justify-center' : ''}`}
+            title="Artwork Engagement"
+          >
+            <MessageSquare size={20} className={isSidebarCollapsed ? '' : 'mr-3 shrink-0'} />
+            {!isSidebarCollapsed && <span className="truncate">Artwork Engagement</span>}
+          </button>
+          <button 
+            onClick={() => setActiveTab("commissions")}
+            className={`w-full flex items-center px-4 py-3 rounded-xl transition-colors ${activeTab === 'commissions' ? 'bg-[#00f3ff]/10 text-[#00f3ff] font-medium' : 'text-gray-400 hover:text-white hover:bg-white/5'} ${isSidebarCollapsed ? 'justify-center' : ''}`}
+            title="Commission Queue"
+          >
+            <Briefcase size={20} className={isSidebarCollapsed ? '' : 'mr-3 shrink-0'} />
+            {!isSidebarCollapsed && <span className="truncate">Commission Queue</span>}
+          </button>
+          <button 
+            onClick={() => setActiveTab("settings")}
+            className={`w-full flex items-center px-4 py-3 rounded-xl transition-colors ${activeTab === 'settings' ? 'bg-[#00f3ff]/10 text-[#00f3ff] font-medium' : 'text-gray-400 hover:text-white hover:bg-white/5'} ${isSidebarCollapsed ? 'justify-center' : ''}`}
+            title="Settings & Payouts"
+          >
+            <Settings size={20} className={isSidebarCollapsed ? '' : 'mr-3 shrink-0'} />
+            {!isSidebarCollapsed && <span className="truncate">Settings & Payouts</span>}
+          </button>
+        </nav>
+        <div className="p-6 border-t border-white/10">
+          <button 
+            onClick={handleLogout}
+            className={`w-full flex items-center px-4 py-3 text-red-400 hover:bg-red-500/10 rounded-xl transition-colors font-medium ${isSidebarCollapsed ? 'justify-center' : ''}`}
+            title="Logout"
+          >
+            <LogOut size={20} className={isSidebarCollapsed ? '' : 'mr-3 shrink-0'} />
+            {!isSidebarCollapsed && <span>Logout</span>}
+          </button>
+        </div>
+      </motion.aside>
 
-        <div className="glass-dark p-8 flex-1">
-          <h2 className="text-xl font-bold text-white mb-6">Recent Portfolio Performance</h2>
-          {artworks.length === 0 ? (
-            <p className="text-gray-500">No artworks uploaded yet. Head to your portfolio to start sharing.</p>
-          ) : (
-            <div className="space-y-4">
-              {artworks.map(art => (
-                <div key={art.id} className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-cover bg-center rounded-lg" style={{ backgroundImage: `url(${art.imageUrl})` }}></div>
-                    <div>
-                      <h4 className="text-white font-medium">{art.title}</h4>
-                      <p className="text-xs text-[#ffd700]">{art.medium}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm text-gray-300">{(art.likes?.length || 0)} Likes</div>
-                    <div className="text-xs text-gray-500">{(art.likes?.length || 0) * 12 + 5} Views</div>
-                  </div>
-                </div>
-              ))}
+      {/* Main Content Area */}
+      <main className="flex-1 relative overflow-y-auto">
+        <NoiseBackground />
+        
+        <div className="relative z-10 p-8 max-w-[1600px] mx-auto min-h-screen flex flex-col">
+          
+          {/* Header Controls (Only shown on Dashboard tab) */}
+          <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 pb-4 border-b border-white/10">
+            <h1 className="text-2xl font-bold text-white tracking-tighter">
+              {activeTab === "dashboard" && "SMART LAYOUT"}
+              {activeTab === "engagement" && "ARTWORK ENGAGEMENT"}
+              {activeTab === "commissions" && "COMMISSION QUEUE"}
+              {activeTab === "settings" && "SETTINGS & PAYOUTS"}
+            </h1>
+            
+            {activeTab === "dashboard" && (
+              <div className="flex flex-wrap gap-2 items-center bg-black/40 p-2 rounded-xl border border-white/5">
+                <span className="text-xs text-gray-500 uppercase tracking-widest mr-2 ml-2">Toggle Widgets:</span>
+                <button onClick={() => toggleWidget('analytics')} className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${activeWidgets.analytics ? 'bg-white/10 text-white' : 'bg-transparent text-gray-500 hover:text-gray-300'}`}>Analytics</button>
+                <button onClick={() => toggleWidget('commissions')} className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${activeWidgets.commissions ? 'bg-white/10 text-white' : 'bg-transparent text-gray-500 hover:text-gray-300'}`}>Commissions</button>
+                <button onClick={() => toggleWidget('portfolio')} className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${activeWidgets.portfolio ? 'bg-white/10 text-white' : 'bg-transparent text-gray-500 hover:text-gray-300'}`}>Portfolio</button>
+                <button onClick={() => toggleWidget('authenticity')} className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${activeWidgets.authenticity ? 'bg-white/10 text-white' : 'bg-transparent text-gray-500 hover:text-gray-300'}`}>Trust</button>
+              </div>
+            )}
+          </header>
+
+          {/* Tab Content Routing */}
+          {activeTab === "dashboard" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-[450px]">
+              {/* Top-Left: Revenue & Action Required (Golden Triangle) */}
+              <div className="col-span-1 lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 h-[450px]">
+                <AnimatePresence mode="popLayout">
+                  {activeWidgets.commissions && (
+                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="h-full">
+                      <CommissionDesk />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                
+                <AnimatePresence mode="popLayout">
+                  {activeWidgets.analytics && (
+                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="h-full">
+                      <AnalyticsStudio />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              <AnimatePresence mode="popLayout">
+                {activeWidgets.portfolio && (
+                  <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="col-span-1 lg:col-span-2 xl:col-span-1 h-[450px]">
+                    <PortfolioCurator />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <AnimatePresence mode="popLayout">
+                {activeWidgets.authenticity && (
+                  <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="col-span-1 h-[450px]">
+                    <AuthenticityHub />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
+
+          {activeTab === "engagement" && (
+            <div className="glass-dark border border-white/5 flex-1 rounded-2xl flex flex-col items-center justify-center text-center p-8">
+              <span className="text-4xl mb-4">💬</span>
+              <h2 className="text-2xl font-bold text-white mb-2">Artwork Engagement</h2>
+              <p className="text-gray-400 max-w-md">
+                This dedicated module is under construction. Soon, you will be able to see all comments, likes, and inquiries specifically routed to your artworks here, and reply directly from this dashboard.
+              </p>
+            </div>
+          )}
+
+          {activeTab === "commissions" && (
+            <div className="glass-dark border border-white/5 flex-1 rounded-2xl flex flex-col items-center justify-center text-center p-8">
+              <span className="text-4xl mb-4">🎨</span>
+              <h2 className="text-2xl font-bold text-white mb-2">Commission Queue</h2>
+              <p className="text-gray-400 max-w-md">
+                Detailed commission tracking and milestone management will live here.
+              </p>
+            </div>
+          )}
+
+          {activeTab === "settings" && (
+            <div className="glass-dark border border-white/5 flex-1 rounded-2xl flex flex-col items-center justify-center text-center p-8">
+              <span className="text-4xl mb-4">⚙️</span>
+              <h2 className="text-2xl font-bold text-white mb-2">Settings & Payouts</h2>
+              <p className="text-gray-400 max-w-md">
+                Manage your profile, adjust your default commission rates, and link your Stripe account for automated payouts.
+              </p>
+            </div>
+          )}
+
         </div>
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }

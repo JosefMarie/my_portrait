@@ -64,3 +64,8 @@ export const acceptBid = async (commissionId: string, bidId: string) => {
   const bidRef = doc(db, "commissions", commissionId, "bids", bidId);
   await updateDoc(bidRef, { status: "accepted" });
 };
+
+export const updateCommissionStatus = async (id: string, newStatus: string) => {
+  const commRef = doc(db, "commissions", id);
+  await updateDoc(commRef, { status: newStatus });
+};

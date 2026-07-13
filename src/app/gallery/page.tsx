@@ -10,8 +10,9 @@ import { Suspense } from "react";
 
 // A single artwork frame in 3D space
 function FramedArtwork({ artwork, position, rotation }: { artwork: Artwork, position: [number, number, number], rotation: [number, number, number] }) {
-  // Use a default texture if the image URL fails or is empty, though drei's useTexture handles standard URLs well.
-  const texture = useTexture(artwork.imageUrl || "/placeholder.jpg");
+  // Route through our Next.js proxy to bypass Firebase CORS entirely
+  const proxiedUrl = artwork.imageUrl ? `/api/proxy-image?url=${encodeURIComponent(artwork.imageUrl)}` : "/placeholder.jpg";
+  const texture = useTexture(proxiedUrl);
 
   return (
     <group position={position} rotation={rotation}>

@@ -6,10 +6,19 @@ import { createCommission, getOpenCommissions, Commission } from "@/lib/firebase
 import NoiseBackground from "@/components/background/NoiseBackground";
 import Link from "next/link";
 import AuthModal from "@/components/auth/AuthModal";
+import { useRouter } from "next/navigation";
 
 export default function Marketplace() {
-  const { user, userRole } = useAuth();
+  const { user, userRole, loading } = useAuth();
   const [commissions, setCommissions] = useState<Commission[]>([]);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && userRole === "artist") {
+      router.push("/dashboard");
+    }
+  }, [userRole, loading, router]);
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [budget, setBudget] = useState("");

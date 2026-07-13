@@ -20,10 +20,13 @@ export interface UserProfile {
   legalName?: string;
   phone?: string;
   address?: string;
+  country?: string;
   websiteUrl?: string;
   statement?: string;
   signatureUrl?: string;
   portfolioUrls?: string[];
+  governmentIdUrl?: string;
+  processVideoUrl?: string;
 }
 
 export const createUserProfile = async (
@@ -67,10 +70,13 @@ export const submitArtistApplication = async (
     legalName: string;
     phone: string;
     address: string;
+    country: string;
     websiteUrl: string;
     statement: string;
     signatureUrl: string;
     portfolioUrls: string[];
+    governmentIdUrl: string;
+    processVideoUrl: string;
   }
 ) => {
   const userRef = doc(db, "users", uid);

@@ -42,6 +42,12 @@ export default function AuthButtons() {
           </Link>
         )}
 
+        {userRole === "buyer" && (
+          <Link href="/collection" className="px-6 py-3 bg-[#00f3ff]/10 hover:bg-[#00f3ff]/20 text-[#00f3ff] transition-colors border border-[#00f3ff]/30 rounded-2xl font-medium shadow-[0_0_20px_rgba(0,243,255,0.05)]">
+            My Collection
+          </Link>
+        )}
+
         {!user ? (
           <button 
             onClick={() => setIsModalOpen(true)}

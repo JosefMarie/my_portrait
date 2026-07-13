@@ -66,10 +66,13 @@ export const artistApplicationSchema = z.object({
   legalName: z.string().trim().min(2, { message: "Legal Name is required." }),
   phone: z.string().trim().min(5, { message: "Valid phone number is required." }),
   address: z.string().trim().min(5, { message: "Studio/Business address is required." }),
+  country: z.string().trim().min(2, { message: "Country is required." }),
   websiteUrl: z.string().url({ message: "Must be a valid URL (e.g., https://instagram.com/myart)" }),
   statement: z.string().trim().min(200, { message: "Artist statement must be at least 200 characters long." }),
   signatureUrl: z.string().url({ message: "Signature upload is required." }),
-  portfolioUrls: z.array(z.string().url()).min(1, { message: "You must upload at least 1 portfolio image." })
+  portfolioUrls: z.array(z.string().url()).min(1, { message: "You must upload at least 1 portfolio image." }),
+  governmentIdUrl: z.string().url({ message: "Government ID is required for verification." }),
+  processVideoUrl: z.string().url({ message: "Process evidence is required for authenticity." })
 });
 
 export type ArtistApplicationFormData = z.infer<typeof artistApplicationSchema>;

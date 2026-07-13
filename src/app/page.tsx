@@ -1,7 +1,27 @@
+"use client";
+
 import NoiseBackground from "@/components/background/NoiseBackground";
 import AuthButtons from "@/components/home/AuthButtons";
+import { useAuth } from "@/lib/contexts/AuthContext";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function Home() {
+  const { user, userRole, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && user) {
+      if (userRole === "artist") {
+        router.push("/dashboard");
+      } else if (userRole === "buyer") {
+        router.push("/collection");
+      } else if (userRole === "admin") {
+        router.push("/admin");
+      }
+    }
+  }, [user, userRole, loading, router]);
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#0A0A0A]">
       <NoiseBackground />
