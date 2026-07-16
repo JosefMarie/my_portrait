@@ -10,6 +10,12 @@ export interface Artwork {
   imageUrl: string;
   story: string;
   likes?: string[];
+  isCurated?: boolean;
+  price?: number;
+  salesCount?: number;
+  aiTags?: string[];
+  saleType?: "fixed" | "auction" | "not_for_sale";
+  auctionEndDate?: number;
 }
 
 export interface Comment {
@@ -74,4 +80,10 @@ export const getComments = async (artworkId: string) => {
   const q = query(collection(db, "artworks", artworkId, "comments"), orderBy("createdAt", "asc"));
   const snapshot = await getDocs(q);
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment));
+};
+
+export const toggleArtworkCuration = async (artworkId: string, isCurated: boolean) => {
+  const artworkRef = doc(db, "artworks", artworkId);
+  await updateDoc(artworkRef, { isCurated });
+  await createLog("SYSTEM", isCurated ? "Artwork featured" : "Artwork unfeatured", "info", `Artwork ID: ${artworkId}`);
 };

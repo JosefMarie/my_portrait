@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/contexts/AuthContext";
 import NoiseBackground from "@/components/background/NoiseBackground";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import FeedModule from "@/components/dashboard/FeedModule";
+import ExploreFeed from "@/components/explore/ExploreFeed";
 
 export default function Feed() {
   const { userRole, loading: authLoading } = useAuth();
@@ -23,8 +23,7 @@ export default function Feed() {
       
       <div className="relative z-10 p-4 md:p-8 max-w-[1600px] mx-auto min-h-screen">
 
-
-        <FeedModule />
+        <ExploreFeed />
       </div>
     </main>
   );

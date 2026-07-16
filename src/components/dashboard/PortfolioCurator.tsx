@@ -18,6 +18,9 @@ export default function PortfolioCurator() {
   const [customMedium, setCustomMedium] = useState("");
   const [story, setStory] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [saleType, setSaleType] = useState<"fixed" | "auction" | "not_for_sale">("not_for_sale");
+  const [price, setPrice] = useState("");
+  const [auctionEndDate, setAuctionEndDate] = useState("");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
 
@@ -67,6 +70,22 @@ export default function PortfolioCurator() {
       await uploadBytes(storageRef, imageFile);
       const imageUrl = await getDownloadURL(storageRef);
 
+      // 1.5 Auto-Generate AI Tags
+      let aiTags: string[] = [];
+      try {
+        const res = await fetch("/api/vision", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageUrl })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.tags) aiTags = data.tags;
+        }
+      } catch (e) {
+        console.error("Failed to generate AI tags", e);
+      }
+
       // 2. Save to Firestore
       const newArtwork: Artwork = {
         artistId: user.uid,
@@ -74,7 +93,16 @@ export default function PortfolioCurator() {
         medium: finalMedium,
         story,
         imageUrl,
+        aiTags,
+        saleType,
       };
+
+      if (saleType !== "not_for_sale" && price) {
+        newArtwork.price = Number(price);
+      }
+      if (saleType === "auction" && auctionEndDate) {
+        newArtwork.auctionEndDate = new Date(auctionEndDate).getTime();
+      }
       
       await addArtwork(newArtwork);
       
@@ -83,6 +111,9 @@ export default function PortfolioCurator() {
       setSelectedMediums([]);
       setCustomMedium("");
       setStory("");
+      setSaleType("not_for_sale");
+      setPrice("");
+      setAuctionEndDate("");
       setImageFile(null);
       setIsModalOpen(false);
       loadArtworks();
@@ -144,14 +175,24 @@ export default function PortfolioCurator() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-[#0A0A0A] border border-white/10 p-8 rounded-2xl w-full max-w-lg shadow-2xl relative"
+              className="bg-[#0A0A0A] border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl relative max-h-[90vh] flex flex-col"
             >
-              <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white">✕</button>
-              <h2 className="text-2xl font-bold text-white mb-6">Upload Artwork</h2>
+              {/* Fixed Header */}
+              <div className="p-8 pb-6 flex justify-between items-center shrink-0 border-b border-white/5">
+                <h2 className="text-2xl font-bold text-white">Upload Artwork</h2>
+                <button 
+                  onClick={() => setIsModalOpen(false)} 
+                  className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-gray-400 hover:text-white hover:bg-red-500/20 hover:border-red-500/50 border border-transparent transition-all"
+                >
+                  ✕
+                </button>
+              </div>
               
-              {error && <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 text-red-300 text-sm rounded-lg">{error}</div>}
+              {/* Scrollable Content */}
+              <div className="p-8 pt-6 overflow-y-auto flex-1 custom-scrollbar">
+                {error && <div className="mb-6 p-3 bg-red-500/20 border border-red-500/30 text-red-300 text-sm rounded-lg">{error}</div>}
 
-              <form onSubmit={handleUpload} className="space-y-4">
+                <form onSubmit={handleUpload} className="space-y-5">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-1">Image File *</label>
                   <input type="file" required accept="image/*" onChange={handleFileChange} className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#00f3ff]/10 file:text-[#00f3ff] hover:file:bg-[#00f3ff]/20" />
@@ -190,10 +231,47 @@ export default function PortfolioCurator() {
                   <label className="block text-sm font-medium text-gray-300 mb-1">The Story (Required) *</label>
                   <textarea required rows={3} value={story} onChange={e => setStory(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#00f3ff]/50 resize-none" placeholder="What inspired this piece? Buyers want to know your creative process." />
                 </div>
-                <button type="submit" disabled={uploading} className="w-full py-4 bg-[#00f3ff] text-black hover:bg-[#00d0dd] transition-colors rounded-xl font-bold mt-4 disabled:opacity-50">
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Sale Options</label>
+                  <div className="flex gap-2 mb-3">
+                    {["not_for_sale", "fixed", "auction"].map(type => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setSaleType(type as any)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                          saleType === type 
+                            ? 'bg-[#00f3ff]/20 text-[#00f3ff] border-[#00f3ff]/50' 
+                            : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/30'
+                        }`}
+                      >
+                        {type === "not_for_sale" ? "Not for Sale" : type === "fixed" ? "Fixed Price" : "Auction"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {saleType !== "not_for_sale" && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                      {saleType === "auction" ? "Starting Bid ($) *" : "Price ($) *"}
+                    </label>
+                    <input required type="number" min="0" value={price} onChange={e => setPrice(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#00f3ff]/50" placeholder="e.g. 500" />
+                  </div>
+                )}
+
+                {saleType === "auction" && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">Auction End Date *</label>
+                    <input required type="datetime-local" value={auctionEndDate} onChange={e => setAuctionEndDate(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#00f3ff]/50 text-sm" />
+                  </div>
+                )}
+                <button type="submit" disabled={uploading} className="w-full py-4 bg-[#00f3ff] text-black hover:bg-[#00d0dd] transition-colors rounded-xl font-bold mt-2 disabled:opacity-50 shadow-[0_0_20px_rgba(0,243,255,0.2)]">
                   {uploading ? "Uploading securely to Vault..." : "Publish to Gallery"}
                 </button>
               </form>
+              </div>
             </motion.div>
           </div>
         )}

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { updateArtistProfile, getUserProfile, UserProfile } from "@/lib/firebase/users";
-import { getPlatformSettings, updatePlatformSettings, PlatformSettings } from "@/lib/firebase/settings";
+import { getPlatformSettings, updatePlatformSettings, PlatformSettings, getSecret, saveSecret } from "@/lib/firebase/settings";
 import { storage } from "@/lib/firebase/config";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
@@ -24,6 +24,10 @@ export default function AdminSettings() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState("");
 
+  const [openAiKey, setOpenAiKey] = useState("");
+  const [verifyingKey, setVerifyingKey] = useState(false);
+  const [keyMessage, setKeyMessage] = useState("");
+
   useEffect(() => {
     if (user) {
       loadData();
@@ -40,6 +44,9 @@ export default function AdminSettings() {
     }
     const s = await getPlatformSettings();
     setSettings(s);
+    
+    const key = await getSecret("gemini");
+    if (key) setOpenAiKey(key);
   };
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
@@ -96,6 +103,34 @@ export default function AdminSettings() {
       setSettingsMessage("Failed to save settings.");
     } finally {
       setSavingSettings(false);
+    }
+  };
+
+  const handleSaveApiKey = async () => {
+    if (!openAiKey.trim()) return;
+    setVerifyingKey(true);
+    setKeyMessage("Verifying API Key...");
+    
+    try {
+      // Verify against Gemini API
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${openAiKey.trim()}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: "Hello" }] }]
+        })
+      });
+      
+      if (res.ok) {
+        await saveSecret("gemini", openAiKey.trim());
+        setKeyMessage("API Key verified and saved successfully!");
+      } else {
+        setKeyMessage("Verification failed. Please check the key.");
+      }
+    } catch (e) {
+      setKeyMessage("Network error during verification.");
+    } finally {
+      setVerifyingKey(false);
     }
   };
 
@@ -217,6 +252,32 @@ export default function AdminSettings() {
               >
                 {settings.maintenanceMode ? "Disable Maintenance Mode" : "Enable Maintenance Mode"}
               </button>
+            </div>
+
+            <div className="bg-white/5 border border-[#00f3ff]/30 p-5 rounded-xl shadow-[0_0_20px_rgba(0,243,255,0.05)]">
+              <h3 className="text-[#00f3ff] font-medium mb-2 flex items-center gap-2">🤖 Google Gemini API Key (Vision)</h3>
+              <p className="text-sm text-gray-400 mb-4">Required for the AI Visual Search and Automatic Tagging features.</p>
+              <div className="flex flex-col gap-3">
+                <input 
+                  type="password" 
+                  value={openAiKey}
+                  onChange={(e) => setOpenAiKey(e.target.value)}
+                  placeholder="AIzaSy..." 
+                  className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white font-mono text-sm focus:outline-none focus:border-[#00f3ff]/50" 
+                />
+                <button 
+                  onClick={handleSaveApiKey}
+                  disabled={verifyingKey || !openAiKey}
+                  className="w-full px-4 py-3 bg-[#00f3ff]/20 text-[#00f3ff] font-bold rounded-lg hover:bg-[#00f3ff]/30 disabled:opacity-50 transition-colors"
+                >
+                  {verifyingKey ? "Verifying..." : "Verify & Save API Key"}
+                </button>
+                {keyMessage && (
+                  <p className={`text-sm mt-2 ${keyMessage.includes("failed") || keyMessage.includes("error") ? "text-red-400" : "text-green-400"}`}>
+                    {keyMessage}
+                  </p>
+                )}
+              </div>
             </div>
 
             {settingsMessage && (

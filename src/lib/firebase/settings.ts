@@ -14,15 +14,39 @@ const DEFAULT_SETTINGS: PlatformSettings = {
 };
 
 export const getPlatformSettings = async (): Promise<PlatformSettings> => {
-  const ref = doc(db, "settings", "platform");
-  const snap = await getDoc(ref);
-  if (snap.exists()) {
-    return { ...DEFAULT_SETTINGS, ...snap.data() } as PlatformSettings;
+  try {
+    const ref = doc(db, "settings", "platform");
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      return { ...DEFAULT_SETTINGS, ...snap.data() } as PlatformSettings;
+    }
+    return DEFAULT_SETTINGS;
+  } catch (error) {
+    console.warn("Failed to fetch platform settings:", error);
+    return DEFAULT_SETTINGS;
   }
-  return DEFAULT_SETTINGS;
 };
 
 export const updatePlatformSettings = async (settings: Partial<PlatformSettings>) => {
   const ref = doc(db, "settings", "platform");
   await setDoc(ref, settings, { merge: true });
+};
+
+export const getSecret = async (key: string): Promise<string | null> => {
+  try {
+    const ref = doc(db, "settings", "secrets");
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      return snap.data()[key] || null;
+    }
+    return null;
+  } catch (error) {
+    console.warn("Failed to fetch secret:", error);
+    return null;
+  }
+};
+
+export const saveSecret = async (key: string, value: string) => {
+  const ref = doc(db, "settings", "secrets");
+  await setDoc(ref, { [key]: value }, { merge: true });
 };

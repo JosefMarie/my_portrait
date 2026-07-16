@@ -11,6 +11,8 @@ export default function SearchPage() {
   const [image, setImage] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [results, setResults] = useState<Artwork[]>([]);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [detectedTags, setDetectedTags] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleDrag = (e: React.DragEvent) => {
@@ -42,39 +44,73 @@ export default function SearchPage() {
   const handleFile = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
-      setImage(e.target?.result as string);
-      startScanning();
+      const b64 = e.target?.result as string;
+      setImage(b64);
+      startScanning(b64);
     };
     reader.readAsDataURL(file);
   };
 
-  const startScanning = async () => {
+  const startScanning = async (imageBase64: string) => {
     setIsScanning(true);
     setResults([]);
+    setErrorMsg(null);
+    setDetectedTags([]);
     
-    // Simulate AI scanning delay
-    await new Promise((resolve) => setTimeout(resolve, 3000));
-    
-    // Fetch mock results (randomly selecting 3 artworks for simulation)
-    const allArtworks = await getAllArtworks();
-    const shuffled = allArtworks.sort(() => 0.5 - Math.random());
-    setResults(shuffled.slice(0, 3));
-    
-    setIsScanning(false);
+    try {
+      const res = await fetch("/api/vision", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl: imageBase64 })
+      });
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to scan image");
+      }
+
+      const searchedTags = data.tags as string[];
+      setDetectedTags(searchedTags);
+
+      // Fetch all artworks and score them
+      const allArtworks = await getAllArtworks();
+      const scoredArtworks = allArtworks.map(art => {
+        let score = 0;
+        const artText = `${art.title} ${art.medium} ${art.story} ${(art.aiTags || []).join(" ")}`.toLowerCase();
+        searchedTags.forEach(tag => {
+          if (artText.includes(tag.toLowerCase())) score += 1;
+        });
+        return { art, score };
+      });
+
+      // Sort by score and keep top 3
+      const matches = scoredArtworks
+        .filter(item => item.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .map(item => item.art)
+        .slice(0, 3);
+        
+      // If no matches based on tags, just return 3 random as fallback so UI doesn't look broken
+      if (matches.length === 0 && allArtworks.length > 0) {
+        const shuffled = [...allArtworks].sort(() => 0.5 - Math.random());
+        setResults(shuffled.slice(0, 3));
+      } else {
+        setResults(matches);
+      }
+      
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(err.message);
+    } finally {
+      setIsScanning(false);
+    }
   };
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#0A0A0A]">
       <NoiseBackground />
       
-      <div className="relative z-10 p-8 max-w-7xl mx-auto min-h-screen flex flex-col">
-        <header className="flex justify-between items-center mb-12 pb-4 border-b border-white/10">
-          <Link href="/" className="text-gray-400 hover:text-white transition-colors flex items-center gap-2">
-            <span>←</span> Home
-          </Link>
-          <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tighter">AI VISUAL SEARCH</h1>
-          <div className="w-16"></div>
-        </header>
+      <div className="relative z-10 p-8 max-w-7xl mx-auto min-h-screen flex flex-col pt-24">
 
         <div className="flex-1 flex flex-col items-center">
           {!image ? (
@@ -113,22 +149,42 @@ export default function SearchPage() {
               </div>
 
               {isScanning && (
-                <div className="text-[#00f3ff] text-lg font-mono animate-pulse">
-                  Extracting visual embeddings...
+                <div className="text-[#00f3ff] text-lg font-mono animate-pulse text-center">
+                  Extracting visual embeddings...<br/>
+                  <span className="text-xs text-gray-500 mt-2 block">Analyzing style, palette, and medium...</span>
+                </div>
+              )}
+
+              {errorMsg && (
+                <div className="mt-4 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-center max-w-md">
+                  <p className="font-bold mb-1">Search Failed</p>
+                  <p className="text-sm">{errorMsg}</p>
+                  <button onClick={() => setImage(null)} className="mt-4 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm text-white transition-colors">Try Again</button>
                 </div>
               )}
 
               {/* Results */}
               <AnimatePresence>
-                {!isScanning && results.length > 0 && (
+                {!isScanning && !errorMsg && results.length > 0 && (
                   <motion.div 
                     initial={{ opacity: 0, y: 50 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="w-full"
                   >
                     <div className="flex justify-between items-end mb-6">
-                      <h2 className="text-2xl font-bold text-white">AI Matches Found</h2>
-                      <button onClick={() => setImage(null)} className="text-sm text-gray-400 hover:text-white transition-colors">Start New Search</button>
+                      <div>
+                        <h2 className="text-2xl font-bold text-white mb-2">AI Matches Found</h2>
+                        {detectedTags.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {detectedTags.map(tag => (
+                              <span key={tag} className="px-2 py-1 bg-[#00f3ff]/10 text-[#00f3ff] text-xs font-mono rounded border border-[#00f3ff]/20">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <button onClick={() => { setImage(null); setResults([]); setDetectedTags([]); }} className="text-sm text-gray-400 hover:text-white transition-colors">Start New Search</button>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
