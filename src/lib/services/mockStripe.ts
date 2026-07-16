@@ -24,7 +24,7 @@ export const createEscrowPayment = async (
   return new Promise((resolve) => {
     setTimeout(() => {
       resolve({
-        id: \`mock_pi_\${generateId()}\`,
+        id: `mock_pi_${generateId()}`,
         amount,
         buyerId,
         artistId,
@@ -43,7 +43,7 @@ export const createEscrowPayment = async (
 export const releaseEscrow = async (paymentId: string): Promise<boolean> => {
   return new Promise((resolve) => {
     setTimeout(() => {
-      console.log(\`Funds for payment \${paymentId} released to artist.\`);
+      console.log(`Funds for payment ${paymentId} released to artist.`);
       resolve(true);
     }, 1000);
   });
@@ -55,7 +55,7 @@ export const releaseEscrow = async (paymentId: string): Promise<boolean> => {
 export const refundEscrow = async (paymentId: string): Promise<boolean> => {
   return new Promise((resolve) => {
     setTimeout(() => {
-      console.log(\`Payment \${paymentId} refunded to buyer.\`);
+      console.log(`Payment ${paymentId} refunded to buyer.`);
       resolve(true);
     }, 1000);
   });

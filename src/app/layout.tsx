@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { AuthProvider } from "@/lib/contexts/AuthContext";
+import { CartProvider } from "@/lib/contexts/CartContext";
+import CartDrawer from "@/components/cart/CartDrawer";
 import VerificationBanner from "@/components/auth/VerificationBanner";
 import GlobalRouteGuard from "@/components/auth/GlobalRouteGuard";
+import Navbar from "@/components/layout/Navbar";
 import "./globals.css";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -27,9 +30,13 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <AuthProvider>
-          <GlobalRouteGuard />
-          <VerificationBanner />
-          {children}
+          <CartProvider>
+            <Navbar />
+            <CartDrawer />
+            <GlobalRouteGuard />
+            <VerificationBanner />
+            {children}
+          </CartProvider>
         </AuthProvider>
       </body>
     </html>

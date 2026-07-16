@@ -117,16 +117,7 @@ export default function VirtualGallery() {
   }, []);
 
   return (
-    <main className="relative w-full h-screen bg-[#0A0A0A] overflow-hidden">
-      <div className="absolute top-0 left-0 w-full z-10 p-8 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
-        <Link href="/" className="text-gray-400 hover:text-white transition-colors pointer-events-auto flex items-center gap-2">
-          <span>←</span> Exit Gallery
-        </Link>
-        <h1 className="text-2xl font-bold text-white tracking-tighter">THE VOID GALLERY</h1>
-        <div className="w-24 text-right text-xs text-gray-500 uppercase tracking-widest">
-          {artworks.length} Exhibits
-        </div>
-      </div>
+    <main className="relative w-full flex-1 h-[calc(100vh-73px)] bg-[#0A0A0A] overflow-hidden">
       
       {/* 3D Canvas */}
       <Canvas camera={{ position: [0, 0, 0], fov: 60 }}>

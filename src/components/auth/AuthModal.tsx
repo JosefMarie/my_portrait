@@ -3,18 +3,21 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { UserRole } from "@/lib/firebase/users";
+import { useRouter } from "next/navigation";
 import { registrationSchema, sanitizeInput, sanitizePreferences } from "@/lib/validations/auth";
 import { z } from "zod";
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  redirectOnLogin?: boolean;
 }
 
 const PREFERENCE_OPTIONS = ["Portrait", "Oil", "Abstract", "Digital", "Sketch"];
 
-export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
+export default function AuthModal({ isOpen, onClose, redirectOnLogin = true }: AuthModalProps) {
   const { signIn, signUp } = useAuth();
+  const router = useRouter();
   const [isLogin, setIsLogin] = useState(true);
   
   // Basic Credentials
@@ -59,8 +62,16 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
     try {
       if (isLogin) {
-        await signIn(email, password);
+        const loggedInRole = await signIn(email, password);
         onClose();
+        if (redirectOnLogin) {
+          if (loggedInRole === "admin") {
+            router.push("/admin");
+          } else if (loggedInRole === "artist") {
+            router.push("/dashboard");
+          }
+        }
+        // Buyer stays on the current page
       } else {
         // Validation for Sign Up
         const formData = {

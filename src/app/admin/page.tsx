@@ -3,12 +3,15 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { getAllArtworks, deleteArtwork, Artwork } from "@/lib/firebase/artworks";
-import { getOpenCommissions, Commission, updateCommissionStatus } from "@/lib/firebase/commissions";
+import { getOpenCommissions, getPendingAdminCommissions, Commission, updateCommissionStatus } from "@/lib/firebase/commissions";
 import { getPendingArtists, updateArtistStatus, UserProfile } from "@/lib/firebase/users";
 import { useRouter } from "next/navigation";
 import NoiseBackground from "@/components/background/NoiseBackground";
+import GrowthDashboard from "@/components/admin/GrowthDashboard";
+import SystemLogs from "@/components/admin/SystemLogs";
+import AdminSettings from "@/components/admin/AdminSettings";
 import { motion } from "framer-motion";
-import { Users, ImageOff, ShieldAlert, LogOut, ChevronLeft, ChevronRight } from "lucide-react";
+import { Users, ImageOff, ShieldAlert, LogOut, ChevronLeft, ChevronRight, TrendingUp, Database, Settings } from "lucide-react";
 
 export default function AdminDashboard() {
   const { user, userRole, loading } = useAuth();
@@ -16,8 +19,9 @@ export default function AdminDashboard() {
   
   const [artworks, setArtworks] = useState<Artwork[]>([]);
   const [commissions, setCommissions] = useState<Commission[]>([]);
+  const [pendingCommissions, setPendingCommissions] = useState<Commission[]>([]);
   const [pendingArtists, setPendingArtists] = useState<UserProfile[]>([]);
-  const [activeTab, setActiveTab] = useState<"applications" | "content" | "disputes">("applications");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "applications" | "content" | "disputes" | "commissions" | "logs" | "settings">("dashboard");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   useEffect(() => {
@@ -43,6 +47,9 @@ export default function AdminDashboard() {
     const comms = await getOpenCommissions();
     setCommissions(comms);
 
+    const pendingComms = await getPendingAdminCommissions();
+    setPendingCommissions(pendingComms);
+
     const pending = await getPendingArtists();
     setPendingArtists(pending);
   };
@@ -66,6 +73,11 @@ export default function AdminDashboard() {
       await updateArtistStatus(uid, decision);
       setPendingArtists(pendingArtists.filter(a => a.uid !== uid));
     }
+  };
+
+  const handleApproveCommission = async (id: string) => {
+    await updateCommissionStatus(id, "open");
+    setPendingCommissions(pendingCommissions.filter(c => c.id !== id));
   };
 
   const handleLogout = async () => {
@@ -97,6 +109,15 @@ export default function AdminDashboard() {
         </div>
 
         <nav className="flex-1 px-4 space-y-2 mt-4">
+          <button 
+            onClick={() => setActiveTab("dashboard")}
+            className={`w-full flex items-center px-4 py-3 rounded-xl transition-colors ${activeTab === 'dashboard' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'} ${isSidebarCollapsed ? 'justify-center' : ''}`}
+            title="Growth Analytics"
+          >
+            <TrendingUp size={20} className={isSidebarCollapsed ? '' : 'mr-3 shrink-0'} />
+            {!isSidebarCollapsed && <span className="truncate">Growth Analytics</span>}
+          </button>
+
           <button 
             onClick={() => setActiveTab("applications")}
             className={`w-full flex items-center px-4 py-3 rounded-xl transition-colors ${activeTab === 'applications' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'} ${isSidebarCollapsed ? 'justify-center' : ''}`}
@@ -137,6 +158,47 @@ export default function AdminDashboard() {
             <ShieldAlert size={20} className={isSidebarCollapsed ? '' : 'mr-3 shrink-0'} />
             {!isSidebarCollapsed && <span className="truncate">Escrow Disputes</span>}
           </button>
+
+          <button 
+            onClick={() => setActiveTab("commissions")}
+            className={`w-full flex items-center px-4 py-3 rounded-xl transition-colors ${activeTab === 'commissions' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'} ${isSidebarCollapsed ? 'justify-center' : ''}`}
+            title="Commission Oversight"
+          >
+            <div className="relative">
+              <ShieldAlert size={20} className={isSidebarCollapsed ? '' : 'mr-3 shrink-0'} />
+              {pendingCommissions.length > 0 && (
+                <span className={`absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold h-4 min-w-4 flex items-center justify-center rounded-full px-1 ${!isSidebarCollapsed ? 'hidden' : ''}`}>
+                  {pendingCommissions.length}
+                </span>
+              )}
+            </div>
+            {!isSidebarCollapsed && (
+              <div className="flex justify-between items-center w-full truncate">
+                <span className="truncate">Commissions</span>
+                {pendingCommissions.length > 0 && (
+                  <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{pendingCommissions.length}</span>
+                )}
+              </div>
+            )}
+          </button>
+
+          <button 
+            onClick={() => setActiveTab("logs")}
+            className={`w-full flex items-center px-4 py-3 rounded-xl transition-colors ${activeTab === 'logs' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'} ${isSidebarCollapsed ? 'justify-center' : ''}`}
+            title="System Logs"
+          >
+            <Database size={20} className={isSidebarCollapsed ? '' : 'mr-3 shrink-0'} />
+            {!isSidebarCollapsed && <span className="truncate">System Logs</span>}
+          </button>
+
+          <button 
+            onClick={() => setActiveTab("settings")}
+            className={`w-full flex items-center px-4 py-3 rounded-xl transition-colors ${activeTab === 'settings' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'} ${isSidebarCollapsed ? 'justify-center' : ''}`}
+            title="Admin Settings"
+          >
+            <Settings size={20} className={isSidebarCollapsed ? '' : 'mr-3 shrink-0'} />
+            {!isSidebarCollapsed && <span className="truncate">Settings</span>}
+          </button>
         </nav>
 
         <div className="p-6 border-t border-red-500/20">
@@ -159,9 +221,13 @@ export default function AdminDashboard() {
           
           <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 pb-4 border-b border-red-500/30">
             <h1 className="text-2xl font-bold text-red-500 tracking-tighter">
+              {activeTab === "dashboard" && "PLATFORM GROWTH"}
               {activeTab === "applications" && "PENDING APPLICATIONS"}
               {activeTab === "content" && "CONTENT MODERATION"}
               {activeTab === "disputes" && "ESCROW DISPUTES"}
+              {activeTab === "commissions" && "COMMISSION OVERSIGHT"}
+              {activeTab === "logs" && "SYSTEM AUDIT LOGS"}
+              {activeTab === "settings" && "PLATFORM SETTINGS"}
             </h1>
             <div className="text-xs text-red-400 uppercase tracking-widest px-3 py-1 border border-red-500/30 rounded-full bg-red-500/10">
               Superuser Access
@@ -169,6 +235,18 @@ export default function AdminDashboard() {
           </header>
 
           <div className="flex-1">
+            
+            {activeTab === "dashboard" && (
+              <GrowthDashboard />
+            )}
+
+            {activeTab === "logs" && (
+              <SystemLogs />
+            )}
+
+            {activeTab === "settings" && (
+              <AdminSettings />
+            )}
             
             {activeTab === "applications" && (
               <div>
@@ -330,6 +408,52 @@ export default function AdminDashboard() {
                     )}
                   </tbody>
                 </table>
+              </div>
+            )}
+
+            {activeTab === "commissions" && (
+              <div>
+                {pendingCommissions.length === 0 ? (
+                  <div className="glass-dark border border-white/5 rounded-2xl flex flex-col items-center justify-center text-center p-12">
+                    <span className="text-4xl mb-4 text-gray-500">✅</span>
+                    <h2 className="text-xl font-medium text-white mb-2">No pending commissions</h2>
+                    <p className="text-gray-400 max-w-md">All collector requests have been reviewed.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {pendingCommissions.map(comm => (
+                      <div key={comm.id} className="bg-black/40 backdrop-blur-md border border-white/10 p-6 rounded-2xl">
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <h3 className="text-xl font-bold text-white mb-1">{comm.title}</h3>
+                            <div className="flex gap-4 text-sm">
+                              <span className="text-[#ffd700] font-medium">Budget: {comm.budget}</span>
+                              <span className="text-[#00f3ff] font-medium">Medium: {comm.medium}</span>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => handleApproveCommission(comm.id!)} 
+                            className="px-6 py-2 bg-green-500/10 text-green-400 border border-green-500/30 rounded-lg text-sm hover:bg-green-500/20 transition-colors font-medium"
+                          >
+                            Approve & Release to Marketplace
+                          </button>
+                        </div>
+                        <div className="mt-4 p-4 bg-white/5 rounded-xl border border-white/5">
+                          <p className="text-sm text-gray-400 mb-6">{comm.description}</p>
+                    
+                          {comm.referenceImageUrl && (
+                            <div className="mb-6">
+                              <p className="text-xs text-gray-500 uppercase mb-2 font-bold tracking-widest">Reference Photo Attached</p>
+                              <div className="w-32 h-32 rounded-lg border border-white/10 overflow-hidden cursor-pointer" onClick={() => window.open(comm.referenceImageUrl, '_blank')}>
+                                <img src={comm.referenceImageUrl} alt="Reference" className="w-full h-full object-cover hover:scale-105 transition-transform" />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

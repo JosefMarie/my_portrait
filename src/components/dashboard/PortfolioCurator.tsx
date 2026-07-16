@@ -14,7 +14,8 @@ export default function PortfolioCurator() {
   
   // Upload Form State
   const [title, setTitle] = useState("");
-  const [medium, setMedium] = useState("");
+  const [selectedMediums, setSelectedMediums] = useState<string[]>([]);
+  const [customMedium, setCustomMedium] = useState("");
   const [story, setStory] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -53,6 +54,13 @@ export default function PortfolioCurator() {
     setUploading(true);
     setError("");
 
+    const finalMedium = [...selectedMediums, customMedium].filter(Boolean).join(", ");
+    if (!finalMedium) {
+      setError("Please select or enter at least one medium.");
+      setUploading(false);
+      return;
+    }
+
     try {
       // 1. Upload to Firebase Storage
       const storageRef = ref(storage, `artists/${user.uid}/artworks/${Date.now()}_${imageFile.name}`);
@@ -63,7 +71,7 @@ export default function PortfolioCurator() {
       const newArtwork: Artwork = {
         artistId: user.uid,
         title,
-        medium,
+        medium: finalMedium,
         story,
         imageUrl,
       };
@@ -72,7 +80,8 @@ export default function PortfolioCurator() {
       
       // Reset & Close
       setTitle("");
-      setMedium("");
+      setSelectedMediums([]);
+      setCustomMedium("");
       setStory("");
       setImageFile(null);
       setIsModalOpen(false);
@@ -152,8 +161,30 @@ export default function PortfolioCurator() {
                   <input required type="text" value={title} onChange={e => setTitle(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#00f3ff]/50" placeholder="e.g. Midnight Reflection" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Medium *</label>
-                  <input required type="text" value={medium} onChange={e => setMedium(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#00f3ff]/50" placeholder="e.g. Oil on Canvas" />
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Medium *</label>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {["Oil Painting", "Watercolor", "Acrylic", "Charcoal / Pencil", "Digital Art"].map(m => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setSelectedMediums(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m])}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                          selectedMediums.includes(m) 
+                            ? 'bg-[#00f3ff]/20 text-[#00f3ff] border-[#00f3ff]/50' 
+                            : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/30'
+                        }`}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                  <input 
+                    type="text" 
+                    value={customMedium}
+                    onChange={e => setCustomMedium(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#00f3ff]/50 transition-colors"
+                    placeholder="Other (e.g. Mixed Media)"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-1">The Story (Required) *</label>

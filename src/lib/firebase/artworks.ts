@@ -1,5 +1,6 @@
 import { db } from "./config";
-import { collection, addDoc, getDocs, query, where, deleteDoc, doc, updateDoc, getDoc, orderBy } from "firebase/firestore";
+import { collection, addDoc, getDocs, query, where, deleteDoc, doc, updateDoc, getDoc, orderBy, arrayUnion, arrayRemove } from "firebase/firestore";
+import { createLog } from "./logs";
 
 export interface Artwork {
   id?: string;
@@ -20,6 +21,7 @@ export interface Comment {
 
 export const addArtwork = async (artwork: Artwork) => {
   const docRef = await addDoc(collection(db, "artworks"), artwork);
+  await createLog(artwork.artistId, "Uploaded new artwork", "info", `Artwork: ${artwork.title}`);
   return docRef.id;
 };
 
@@ -31,6 +33,7 @@ export const getArtworksByArtist = async (artistId: string) => {
 
 export const deleteArtwork = async (artworkId: string) => {
   await deleteDoc(doc(db, "artworks", artworkId));
+  await createLog("SYSTEM", "Artwork deleted", "warning", `Artwork ID: ${artworkId}`);
 };
 
 export const getAllArtworks = async () => {
@@ -45,11 +48,14 @@ export const likeArtwork = async (artworkId: string, userId: string) => {
   if (snap.exists()) {
     const data = snap.data();
     const likes = data.likes || [];
-    if (!likes.includes(userId)) {
-      await updateDoc(artworkRef, { likes: [...likes, userId] });
+    const isLiked = likes.includes(userId);
+    
+    if (!isLiked) {
+      await updateDoc(artworkRef, { likes: arrayUnion(userId) });
     } else {
-      await updateDoc(artworkRef, { likes: likes.filter((id: string) => id !== userId) });
+      await updateDoc(artworkRef, { likes: arrayRemove(userId) });
     }
+    await createLog(userId, isLiked ? "Unliked artwork" : "Liked artwork", "info", `Artwork ID: ${artworkId}`);
   }
 };
 
@@ -59,7 +65,9 @@ export const addComment = async (artworkId: string, comment: string, userId: str
     text: comment,
     createdAt: Date.now()
   };
-  await addDoc(collection(db, "artworks", artworkId, "comments"), newComment);
+  const docRef = await addDoc(collection(db, "artworks", artworkId, "comments"), newComment);
+  await createLog(userId, "Commented on artwork", "info", `Artwork ID: ${artworkId}`);
+  return docRef.id;
 };
 
 export const getComments = async (artworkId: string) => {

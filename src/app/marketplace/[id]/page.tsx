@@ -94,6 +94,15 @@ export default function CommissionDetails({ params }: { params: Promise<{ id: st
             <span className="px-4 py-1 bg-white/10 rounded-full text-sm text-gray-300 border border-white/20 capitalize">{commission.status}</span>
           </div>
           <p className="text-lg text-gray-300">{commission.description}</p>
+          
+          {commission.referenceImageUrl && (
+            <div className="mt-8">
+              <p className="text-sm font-bold text-gray-400 mb-4 uppercase tracking-widest">Collector's Reference Photo</p>
+              <div className="max-w-md aspect-auto rounded-xl border border-white/10 overflow-hidden cursor-pointer" onClick={() => window.open(commission.referenceImageUrl, '_blank')}>
+                <img src={commission.referenceImageUrl} alt="Reference" className="w-full h-auto object-contain hover:scale-105 transition-transform" />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Bids Section */}

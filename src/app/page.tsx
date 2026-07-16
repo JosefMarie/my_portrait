@@ -1,58 +1,62 @@
 "use client";
 
 import NoiseBackground from "@/components/background/NoiseBackground";
-import AuthButtons from "@/components/home/AuthButtons";
-import { useAuth } from "@/lib/contexts/AuthContext";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import FeaturedArtworks from "@/components/home/FeaturedArtworks";
+import LiveWorkflows from "@/components/home/LiveWorkflows";
+import Footer from "@/components/layout/Footer";
+import { ArrowRight } from "lucide-react";
+import { motion } from "framer-motion";
+import Link from "next/link";
 
 export default function Home() {
-  const { user, userRole, loading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!loading && user) {
-      if (userRole === "artist") {
-        router.push("/dashboard");
-      } else if (userRole === "buyer") {
-        router.push("/collection");
-      } else if (userRole === "admin") {
-        router.push("/admin");
-      }
-    }
-  }, [user, userRole, loading, router]);
+  // Kinetic language easing from design principles
+  const ease: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#0A0A0A]">
+    <main className="relative min-h-screen overflow-x-hidden bg-[#0A0A0A] flex flex-col">
       <NoiseBackground />
       
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-[100dvh] p-4 md:p-8">
-        <div className="glass max-w-5xl w-full p-8 md:p-16 text-center space-y-10">
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tighter text-white">
-            PORTRAITS <span className="text-[#00f3ff] opacity-80">•</span> EXPRESSION <span className="text-[#ffd700] opacity-80">•</span> CANVAS
+      <div className="relative z-10 flex flex-col items-center justify-center flex-1 p-4 md:p-8 mt-20">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1, ease }}
+          className="max-w-4xl w-full text-center space-y-8"
+        >
+          <h1 className="text-5xl md:text-7xl lg:text-[5.5rem] font-bold tracking-tight text-white leading-[1.1]">
+            Where Portrait Artistry <br />
+            <span className="text-[#EBB34B]">Meets Its Collectors</span>
           </h1>
-          <p className="text-lg md:text-xl text-gray-300 max-w-3xl mx-auto font-light leading-relaxed">
-            A premium sanctuary for portrait artists. Showcase your work, accept commissions, and grow your reputation in an environment built exclusively for high-end artistry.
-          </p>
           
-          <AuthButtons />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16 max-w-5xl w-full">
-          {[1, 2, 3].map((item) => (
-            <div key={item} className="glass-dark aspect-[3/4] p-8 flex flex-col justify-end relative overflow-hidden group cursor-pointer">
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent z-10"></div>
-              
-              <div className="absolute inset-0 bg-white/5 group-hover:scale-105 transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]"></div>
-              
-              <div className="relative z-20 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]">
-                <h3 className="text-xl font-medium text-white mb-2">Featured Artist {item}</h3>
-                <p className="text-sm text-gray-400">Oil on Canvas</p>
-              </div>
-            </div>
-          ))}
-        </div>
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, ease, delay: 0.1 }}
+            className="text-lg md:text-xl text-gray-300 max-w-3xl mx-auto font-light leading-relaxed"
+          >
+            A specialized online sanctuary and marketplace for portrait painters, sketchers, and digital artists. Showcase portfolios, handle secure commissions, and discover breathtaking customized art.
+          </motion.p>
+          
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, ease, delay: 0.2 }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-8"
+          >
+            <Link href="/feed" className="w-full sm:w-auto px-8 py-3.5 rounded-full bg-[#EBB34B] text-black font-semibold flex items-center justify-center gap-2 hover:scale-105 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]">
+              Meet Top Artists
+              <ArrowRight className="w-5 h-5" />
+            </Link>
+            <Link href="/search" className="w-full sm:w-auto px-8 py-3.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-[12px] text-white font-medium hover:bg-white/10 hover:scale-105 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] flex items-center justify-center">
+              Try AI Artwork Search
+            </Link>
+          </motion.div>
+        </motion.div>
       </div>
+
+      <FeaturedArtworks />
+      <LiveWorkflows />
+      <Footer />
     </main>
   );
 }
